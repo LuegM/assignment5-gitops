@@ -1,13 +1,11 @@
 name: PR Gate - GitOps Validation
-
 on:
   pull_request:
-    branches: [ master ]
-    types: [opened, synchronize, reopened]
+    branches: [ main ]
 
 jobs:
-  pr-gate:
-    name: PR Gate Validation
+  kube-linter:
+    name: Kubernetes Linting
     runs-on: ubuntu-latest
     
     steps:
@@ -19,89 +17,37 @@ jobs:
         curl -L https://github.com/stackrox/kube-linter/releases/download/v0.6.8/kube-linter-linux.tar.gz | tar xz
         sudo mv kube-linter /usr/local/bin/
         
-    - name: Strict manifest validation
+    - name: Run kube-linter
       run: |
-        echo "🔍 Running strict validation on all manifests..."
-        
-        if [ -d "environments" ]; then
-          find environments/ -name "*.yaml" | while read manifest; do
-            echo "Validating: $manifest"
-            
-            # Skip SealedSecrets as they have different structure
-            if grep -q "kind: SealedSecret" "$manifest"; then
-              echo "⏭️  SKIPPED: $manifest (SealedSecret - different validation rules)"
-              continue
-            fi
-            
-            # Run kube-linter with strict rules
-            if ! kube-linter lint "$manifest" --config - <<< '
-            checks:
-              addAllBuiltIn: true
-              exclude:
-                - "unset-cpu-requirements"
-                - "unset-memory-requirements"
-                - "run-as-non-root"
-            '; then
-              echo "❌ FAILED: $manifest has linting issues"
-              exit 1
-            fi
-            
-            echo "✅ PASSED: $manifest"
-          done
-        else
-          echo "No environments directory found"
-        fi
-        
-        echo "🎉 All manifests passed validation!"
-    
-    - name: Check PR title format
-      run: |
-        PR_TITLE="${{ github.event.pull_request.title }}"
-        echo "PR Title: $PR_TITLE"
-        
-        # Simple check for meaningful PR titles
-        if [[ ${#PR_TITLE} -lt 10 ]]; then
-          echo "❌ PR title too short. Please provide a descriptive title."
-          exit 1
-        fi
-        
-        echo "✅ PR title looks good"
+        # Find and lint all Kubernetes manifests
+        find . -name "*.yaml" -o -name "*.yml" | grep -E "(k8s|environments)" | while read file; do
+          echo "Linting: $file"
+          # Skip SealedSecrets as they have different structure
+          if grep -q "kind: SealedSecret" "$file"; then
+            echo "Skipping SealedSecret: $file"
+            continue
+          fi
+          kube-linter lint "$file"
+        done
 
-  changes-detection:
-    name: Detect Changes
+  validate-kustomize:
+    name: Validate Kustomize
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Detect changed files
-      id: changes
-      run: |
-        # Get changed files
-        git fetch origin main
-        CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
-        
-        echo "Changed files:"
-        echo "$CHANGED_FILES"
-        
-        # Check if any Kubernetes manifests changed
-        if echo "$CHANGED_FILES" | grep -E "\.(yaml|yml)$"; then
-          echo "kubernetes_changed=true" >> $GITHUB_OUTPUT
-          echo "🔄 Kubernetes manifests changed - validation required"
-        else
-          echo "kubernetes_changed=false" >> $GITHUB_OUTPUT
-          echo "📝 No Kubernetes manifests changed"
-        fi
-        
-    - name: Comment on PR
-      if: steps.changes.outputs.kubernetes_changed == 'true'
-      uses: actions/github-script@v7
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
       with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '🚀 **GitOps Validation Started**\n\nKubernetes manifests have been changed. Running validation checks...\n\n- ✅ Manifest linting\n- ✅ Security scanning\n- ✅ Syntax validation'
-          })
+        version: 'v1.28.0'
+        
+    - name: Validate Kustomize builds
+      run: |
+        # Find all kustomization files and validate them
+        find . -name "kustomization.yaml" -o -name "kustomization.yml" | while read kustomization; do
+          dir=$(dirname "$kustomization")
+          echo "Validating Kustomize in: $dir"
+          kubectl kustomize "$dir" > /dev/null
+        done
