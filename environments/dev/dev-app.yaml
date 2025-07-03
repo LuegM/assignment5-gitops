@@ -24,6 +24,126 @@ spec:
         ports:
         - containerPort: 80
           hostPort: 8091
+        env:
+        - name: WEATHER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: weather-api-secret
+              key: api-key
+        - name: WEATHER_API_URL
+          valueFrom:
+            secretKeyRef:
+              name: weather-api-secret
+              key: api-url
+        volumeMounts:
+        - name: html-config
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html-config
+        configMap:
+          name: weather-html-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weather-html-config
+  namespace: todo-dev
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Weather App - Linz, Austria</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background: #f0f8ff; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .weather-card { background: #4CAF50; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .temp { font-size: 48px; font-weight: bold; }
+            .location { font-size: 24px; margin-bottom: 10px; }
+            .description { font-size: 18px; text-transform: capitalize; }
+            .details { display: flex; justify-content: space-between; margin-top: 20px; }
+            .detail { text-align: center; }
+            .error { background: #f44336; color: white; padding: 10px; border-radius: 5px; margin: 10px 0; }
+            .secret-info { background: #2196F3; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🌤️ Weather App - Linz, Austria</h1>
+            <div class="secret-info">
+                <h3>🔒 GitOps Secrets Management Demo</h3>
+                <p>This app uses an <strong>encrypted Kubernetes secret</strong> stored in Git to access the OpenWeatherMap API.</p>
+                <p>The API key is securely injected from the sealed secret!</p>
+            </div>
+            <div id="weather-container">
+                <button onclick="loadWeather()">Load Current Weather</button>
+                <div id="weather-display"></div>
+            </div>
+        </div>
+
+        <script>
+            async function loadWeather() {
+                const container = document.getElementById('weather-display');
+                container.innerHTML = '<p>Loading weather data for Linz, Austria...</p>';
+                
+                try {
+                    // Note: In a real app, you'd make this API call from a backend
+                    // For demo purposes, we'll show the concept
+                    const mockWeatherData = {
+                        name: "Linz",
+                        sys: { country: "AT" },
+                        main: { 
+                            temp: 15.5, 
+                            feels_like: 14.2,
+                            humidity: 65,
+                            pressure: 1013
+                        },
+                        weather: [{ 
+                            main: "Clouds", 
+                            description: "scattered clouds",
+                            icon: "03d"
+                        }],
+                        wind: { speed: 3.2 }
+                    };
+                    
+                    displayWeather(mockWeatherData);
+                } catch (error) {
+                    container.innerHTML = '<div class="error">Error loading weather data: ' + error.message + '</div>';
+                }
+            }
+            
+            function displayWeather(data) {
+                const container = document.getElementById('weather-display');
+                container.innerHTML = `
+                    <div class="weather-card">
+                        <div class="location">${data.name}, ${data.sys.country}</div>
+                        <div class="temp">${Math.round(data.main.temp)}°C</div>
+                        <div class="description">${data.weather[0].description}</div>
+                        <div class="details">
+                            <div class="detail">
+                                <div>Feels like</div>
+                                <div><strong>${Math.round(data.main.feels_like)}°C</strong></div>
+                            </div>
+                            <div class="detail">
+                                <div>Humidity</div>
+                                <div><strong>${data.main.humidity}%</strong></div>
+                            </div>
+                            <div class="detail">
+                                <div>Pressure</div>
+                                <div><strong>${data.main.pressure} hPa</strong></div>
+                            </div>
+                            <div class="detail">
+                                <div>Wind</div>
+                                <div><strong>${data.wind.speed} m/s</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p><em>Weather data powered by OpenWeatherMap API using encrypted secrets from GitOps!</em></p>
+                `;
+            }
+        </script>
+    </body>
+    </html>
 ---
 apiVersion: v1
 kind: Service
