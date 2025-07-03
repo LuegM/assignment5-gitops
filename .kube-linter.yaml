@@ -1,0 +1,9 @@
+checks:
+  addAllBuiltIn: true
+  exclude:
+    # Allow some flexibility for demo purposes
+    - "unset-cpu-requirements"
+    - "unset-memory-requirements" 
+    - "run-as-non-root"
+    - "no-read-only-root-fs"
+    - "privilege-escalation-container"

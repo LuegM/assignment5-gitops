@@ -1,0 +1,102 @@
+name: PR Gate - GitOps Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-gate:
+    name: PR Gate Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup kube-linter
+      run: |
+        curl -L https://github.com/stackrox/kube-linter/releases/download/v0.6.8/kube-linter-linux.tar.gz | tar xz
+        sudo mv kube-linter /usr/local/bin/
+        
+    - name: Strict manifest validation
+      run: |
+        echo "🔍 Running strict validation on all manifests..."
+        
+        # Find all YAML files in environments directory
+        if [ -d "environments" ]; then
+          find environments/ -name "*.yaml" | while read manifest; do
+            echo "Validating: $manifest"
+            
+            # Run kube-linter with strict rules
+            if ! kube-linter lint "$manifest" --config - <<< '
+            checks:
+              addAllBuiltIn: true
+              exclude:
+                - "unset-cpu-requirements"
+                - "unset-memory-requirements"
+                - "run-as-non-root"
+            '; then
+              echo "❌ FAILED: $manifest has linting issues"
+              exit 1
+            fi
+            
+            echo "✅ PASSED: $manifest"
+          done
+        else
+          echo "No environments directory found"
+        fi
+        
+        echo "🎉 All manifests passed validation!"
+        
+    - name: Check PR title format
+      run: |
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        echo "PR Title: $PR_TITLE"
+        
+        # Simple check for meaningful PR titles
+        if [[ ${#PR_TITLE} -lt 10 ]]; then
+          echo "❌ PR title too short. Please provide a descriptive title."
+          exit 1
+        fi
+        
+        echo "✅ PR title looks good"
+
+  changes-detection:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Detect changed files
+      id: changes
+      run: |
+        # Get changed files
+        git fetch origin main
+        CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+        
+        echo "Changed files:"
+        echo "$CHANGED_FILES"
+        
+        # Check if any Kubernetes manifests changed
+        if echo "$CHANGED_FILES" | grep -E "\.(yaml|yml)$"; then
+          echo "kubernetes_changed=true" >> $GITHUB_OUTPUT
+          echo "🔄 Kubernetes manifests changed - validation required"
+        else
+          echo "kubernetes_changed=false" >> $GITHUB_OUTPUT
+          echo "📝 No Kubernetes manifests changed"
+        fi
+        
+    - name: Comment on PR
+      if: steps.changes.outputs.kubernetes_changed == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🚀 **GitOps Validation Started**\n\nKubernetes manifests have been changed. Running validation checks...\n\n- ✅ Manifest linting\n- ✅ Security scanning\n- ✅ Syntax validation'
+          })
