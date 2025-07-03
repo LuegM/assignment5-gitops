@@ -23,10 +23,15 @@ jobs:
       run: |
         echo "🔍 Running strict validation on all manifests..."
         
-        # Find all YAML files in environments directory
         if [ -d "environments" ]; then
           find environments/ -name "*.yaml" | while read manifest; do
             echo "Validating: $manifest"
+            
+            # Skip SealedSecrets as they have different structure
+            if grep -q "kind: SealedSecret" "$manifest"; then
+              echo "⏭️  SKIPPED: $manifest (SealedSecret - different validation rules)"
+              continue
+            fi
             
             # Run kube-linter with strict rules
             if ! kube-linter lint "$manifest" --config - <<< '
@@ -48,7 +53,7 @@ jobs:
         fi
         
         echo "🎉 All manifests passed validation!"
-        
+    
     - name: Check PR title format
       run: |
         PR_TITLE="${{ github.event.pull_request.title }}"
