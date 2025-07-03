@@ -23,7 +23,6 @@ spec:
         image: nginx:1.21
         ports:
         - containerPort: 80
-          hostPort: 8093  # Changed from 8092 to 8093
         resources:
           requests:
             memory: "64Mi"
