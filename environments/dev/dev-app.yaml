@@ -54,38 +54,74 @@ data:
     <head>
         <title>Weather App - Linz, Austria</title>
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; background: #f0f8ff; }
-            .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .secret-info { background: #2196F3; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
-            .weather-info { background: #4CAF50; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
-            .api-info { background: #FF9800; color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            body { 
+                font-family: Arial, sans-serif; 
+                margin: 40px; 
+                background: #f5f5f5; 
+                color: #333;
+            }
+            .container { 
+                max-width: 500px; 
+                margin: 0 auto; 
+                background: white; 
+                padding: 30px; 
+                border-radius: 8px; 
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            }
+            h1 { 
+                text-align: center; 
+                color: #2c3e50; 
+                margin-bottom: 30px; 
+            }
+            .info-box { 
+                background: #3498db; 
+                color: white; 
+                padding: 20px; 
+                border-radius: 5px; 
+                margin: 20px 0; 
+            }
+            .weather-data { 
+                background: #27ae60; 
+                color: white; 
+                padding: 20px; 
+                border-radius: 5px; 
+                margin: 20px 0; 
+            }
+            .secret-status { 
+                background: #e74c3c; 
+                color: white; 
+                padding: 15px; 
+                border-radius: 5px; 
+                margin: 20px 0; 
+                text-align: center; 
+            }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>🌤️ Weather App - Linz, Austria</h1>
-            <div class="secret-info">
-                <h3>🔒 GitOps Secrets Management Demo</h3>
-                <p>This app uses an <strong>encrypted Kubernetes secret</strong> stored in Git!</p>
-                <p>The API key is securely injected from the sealed secret.</p>
-                <p>Secret management: <strong>Sealed Secrets</strong></p>
+            <h1>Weather App - Linz, Austria</h1>
+            
+            <div class="info-box">
+                <h3>GitOps Secrets Management Demo</h3>
+                <p>This app uses an encrypted Kubernetes secret stored in Git.</p>
+                <p>API key is securely injected from sealed secret.</p>
             </div>
-            <div class="weather-info">
-                <h3>🌍 Current Weather - Linz, Austria</h3>
-                <p>Temperature: <strong>15°C</strong></p>
-                <p>Conditions: <strong>Partly Cloudy</strong></p>
-                <p>Humidity: <strong>65%</strong></p>
-                <p>Wind: <strong>3.2 m/s</strong></p>
+            
+            <div class="weather-data">
+                <h3>Current Weather - Linz, Austria</h3>
+                <p>Temperature: 15°C</p>
+                <p>Conditions: Partly Cloudy</p>
+                <p>Humidity: 65%</p>
+                <p>Wind: 3.2 m/s</p>
             </div>
-            <div class="api-info">
-                <h3>🔧 Technical Details</h3>
-                <p>API Provider: <strong>OpenWeatherMap</strong></p>
-                <p>Location: <strong>Linz, Austria</strong></p>
-                <p>Secret Status: <strong>✅ Loaded from Kubernetes</strong></p>
-                <p>Deployment: <strong>GitOps via Argo CD</strong></p>
+            
+            <div class="secret-status">
+                <strong>Secret Status: Loaded from Kubernetes</strong>
             </div>
-            <hr>
-            <p><em>This demonstrates secure secret management in GitOps workflows!</em></p>
+            
+            <p style="text-align: center; color: #7f8c8d; margin-top: 30px;">
+                <em>Deployed via GitOps with Argo CD</em>
+            </p>
         </div>
     </body>
     </html>
