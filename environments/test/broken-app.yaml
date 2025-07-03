@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: broken-app
+spec:
+  # Missing required fields - this will fail validation
+  containers:
+  - name: nginx
+    image: nginx:latest  # This will fail kube-linter (latest tag)
+    securityContext:
+      privileged: true   # This will fail security check
